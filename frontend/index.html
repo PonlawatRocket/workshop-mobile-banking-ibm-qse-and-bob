@@ -1,0 +1,594 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>ThaiPay Lite</title>
+<script src="https://cdn.jsdelivr.net/npm/qrcodejs@1.0.0/qrcode.min.js"></script>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: -apple-system, "Segoe UI", sans-serif;
+    background: #e9f0fb;
+    display: flex; justify-content: center; min-height: 100vh;
+  }
+  #app {
+    width: 100%; max-width: 420px;
+    background: #fff;
+    min-height: 100vh;
+    display: flex; flex-direction: column;
+    box-shadow: 0 0 24px rgba(0,0,0,.12);
+  }
+  /* Header */
+  .header {
+    background: linear-gradient(135deg, #1a56c4 0%, #0e3a8a 100%);
+    color: #fff;
+    padding: 18px 20px 14px;
+    display: flex; align-items: center; gap: 12px;
+  }
+  .header-logo {
+    width: 36px; height: 36px; background: #fff; border-radius: 8px;
+    display: flex; align-items: center; justify-content: center;
+    font-weight: 900; color: #1a56c4; font-size: 18px; flex-shrink: 0;
+  }
+  .header-title { font-size: 18px; font-weight: 700; }
+  .header-sub   { font-size: 12px; opacity: .8; }
+  .header-user  { margin-left: auto; font-size: 13px; opacity: .9; text-align: right; }
+  /* Tabs */
+  .tabs {
+    display: flex; background: #f0f4ff;
+    border-bottom: 2px solid #d0d9f0; overflow-x: auto; flex-shrink: 0;
+  }
+  .tab {
+    flex: 1 0 auto; min-width: 52px; padding: 10px 4px;
+    font-size: 11px; text-align: center; cursor: pointer;
+    color: #555; border: none; background: none; white-space: nowrap;
+  }
+  .tab.active { color: #1a56c4; border-bottom: 2px solid #1a56c4; font-weight: 700; }
+  /* Content */
+  .page { display: none; flex-direction: column; flex: 1; padding: 20px; gap: 14px; }
+  .page.active { display: flex; }
+  /* Card */
+  .card {
+    background: #f7f9ff; border: 1px solid #d0d9f0; border-radius: 12px;
+    padding: 16px; display: flex; flex-direction: column; gap: 10px;
+  }
+  .card h3 { font-size: 14px; color: #1a56c4; font-weight: 700; }
+  /* Form */
+  label { font-size: 13px; color: #444; font-weight: 600; }
+  input, select {
+    width: 100%; padding: 9px 12px; border: 1px solid #c5cfe8; border-radius: 8px;
+    font-size: 14px; margin-top: 3px; outline: none;
+  }
+  input:focus { border-color: #1a56c4; }
+  .field { display: flex; flex-direction: column; }
+  /* Buttons */
+  .btn {
+    width: 100%; padding: 11px; border: none; border-radius: 8px;
+    font-size: 15px; font-weight: 700; cursor: pointer; transition: opacity .15s;
+  }
+  .btn:active { opacity: .8; }
+  .btn-primary  { background: #1a56c4; color: #fff; }
+  .btn-secondary{ background: #e8edf8; color: #1a56c4; }
+  .btn-danger   { background: #dc2626; color: #fff; }
+  .btn-sm {
+    padding: 7px 14px; font-size: 13px; border-radius: 6px;
+    border: none; cursor: pointer; font-weight: 600;
+  }
+  .btn-sm.primary   { background: #1a56c4; color: #fff; }
+  .btn-sm.secondary { background: #e8edf8; color: #1a56c4; }
+  /* Balance card */
+  .balance-card {
+    background: linear-gradient(135deg, #1a56c4 0%, #0e3a8a 100%);
+    border-radius: 14px; padding: 22px; color: #fff;
+  }
+  .balance-label { font-size: 12px; opacity: .8; margin-bottom: 4px; }
+  .balance-amount { font-size: 32px; font-weight: 800; letter-spacing: -1px; }
+  .balance-currency { font-size: 14px; opacity: .7; }
+  .balance-name { font-size: 14px; opacity: .9; margin-top: 8px; }
+  /* Slip */
+  .slip-box {
+    background: #fff; border: 2px dashed #1a56c4; border-radius: 12px;
+    padding: 18px; display: flex; flex-direction: column; gap: 8px;
+  }
+  .slip-row { display: flex; justify-content: space-between; font-size: 13px; }
+  .slip-row .key { color: #888; }
+  .slip-row .val { font-weight: 600; color: #222; text-align: right; max-width: 60%; word-break: break-all; }
+  .slip-amount-big { font-size: 24px; font-weight: 800; color: #1a56c4; text-align: center; margin: 6px 0; }
+  #qr-container { display: flex; justify-content: center; margin: 8px 0; }
+  /* Status badge */
+  .badge {
+    display: inline-block; padding: 5px 14px; border-radius: 20px;
+    font-size: 13px; font-weight: 700; text-align: center;
+  }
+  .badge-success { background: #d1fae5; color: #065f46; }
+  .badge-danger  { background: #fee2e2; color: #991b1b; }
+  .badge-info    { background: #dbeafe; color: #1e40af; }
+  /* Alert */
+  .alert {
+    padding: 10px 14px; border-radius: 8px; font-size: 13px;
+    display: none;
+  }
+  .alert.show { display: block; }
+  .alert-error   { background: #fee2e2; color: #991b1b; border: 1px solid #fca5a5; }
+  .alert-success { background: #d1fae5; color: #065f46; border: 1px solid #6ee7b7; }
+  /* Table */
+  table { width: 100%; border-collapse: collapse; font-size: 12px; }
+  th, td { padding: 6px 8px; border-bottom: 1px solid #e5e9f5; text-align: left; }
+  th { background: #f0f4ff; color: #1a56c4; font-weight: 700; }
+  /* Partner */
+  .kv { display: flex; flex-direction: column; gap: 4px; }
+  .kv-row { display: flex; flex-direction: column; }
+  .kv-row .k { font-size: 11px; color: #888; font-weight: 600; }
+  .kv-row .v { font-size: 13px; color: #222; word-break: break-all; }
+  /* Profile */
+  .profile-avatar {
+    width: 64px; height: 64px; border-radius: 50%;
+    background: linear-gradient(135deg, #1a56c4, #0e3a8a);
+    display: flex; align-items: center; justify-content: center;
+    color: #fff; font-size: 26px; font-weight: 800; margin: 0 auto;
+  }
+  .profile-name { font-size: 18px; font-weight: 700; text-align: center; color: #222; }
+  .profile-rows { display: flex; flex-direction: column; gap: 10px; margin-top: 6px; }
+  .profile-field { display: flex; justify-content: space-between; font-size: 13px; }
+  .profile-field .pk { color: #888; }
+  .profile-field .pv { font-weight: 600; font-family: monospace; }
+  /* Login choice */
+  .login-tabs { display: flex; gap: 8px; margin-bottom: 4px; }
+  .ltab { flex: 1; padding: 8px; border: 1px solid #d0d9f0; border-radius: 8px;
+          text-align: center; cursor: pointer; font-size: 13px; color: #555; background: #f7f9ff; }
+  .ltab.active { border-color: #1a56c4; color: #1a56c4; font-weight: 700; background: #e8f0fe; }
+  /* Spinner */
+  .spin { display: inline-block; width: 16px; height: 16px;
+          border: 2px solid rgba(255,255,255,.4); border-top-color: #fff;
+          border-radius: 50%; animation: spin .6s linear infinite; vertical-align: middle; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  /* Scrollable content */
+  .page { overflow-y: auto; }
+  .footer { text-align: center; font-size: 11px; color: #aaa; padding: 12px; }
+</style>
+</head>
+<body>
+<div id="app">
+  <!-- Header -->
+  <div class="header">
+    <div class="header-logo">T</div>
+    <div>
+      <div class="header-title">ThaiPay Lite</div>
+      <div class="header-sub">ธนาคารไทยเพย์</div>
+    </div>
+    <div class="header-user" id="header-user" style="display:none">
+      <div id="header-name"></div>
+      <a href="#" onclick="logout()" style="color:#aed4ff;font-size:11px">ออกจากระบบ</a>
+    </div>
+  </div>
+
+  <!-- Tabs (hidden when logged-out) -->
+  <div class="tabs" id="main-tabs" style="display:none">
+    <button class="tab active" onclick="showPage('home',this)">🏠 หน้าหลัก</button>
+    <button class="tab" onclick="showPage('transfer',this)">💸 โอนเงิน</button>
+    <button class="tab" onclick="showPage('slip',this)">🧾 สลิป</button>
+    <button class="tab" onclick="showPage('verify',this)">✅ ตรวจสอบ</button>
+    <button class="tab" onclick="showPage('profile',this)">👤 โปรไฟล์</button>
+    <button class="tab" onclick="showPage('admin',this)">🔒 Admin</button>
+  </div>
+
+  <!-- ── PAGE: Login / Register ─────────────────────────────── -->
+  <div class="page active" id="page-login">
+    <div style="text-align:center; margin: 10px 0 4px">
+      <div style="font-size:48px">🏦</div>
+      <div style="font-size:20px; font-weight:800; color:#1a56c4">ยินดีต้อนรับ</div>
+      <div style="font-size:13px; color:#888">ThaiPay Lite Demo Banking</div>
+    </div>
+    <div class="login-tabs">
+      <div class="ltab active" id="ltab-login" onclick="switchLoginMode('login')">เข้าสู่ระบบ</div>
+      <div class="ltab" id="ltab-register" onclick="switchLoginMode('register')">สมัครสมาชิก</div>
+    </div>
+
+    <div class="card" id="login-form-card">
+      <h3>เข้าสู่ระบบ</h3>
+      <div id="login-alert" class="alert"></div>
+      <div class="field"><label>ชื่อผู้ใช้</label><input id="l-user" type="text" placeholder="somchai" /></div>
+      <div class="field"><label>รหัสผ่าน</label><input id="l-pass" type="password" placeholder="demo1234" /></div>
+      <button class="btn btn-primary" onclick="doLogin()">เข้าสู่ระบบ</button>
+      <div style="font-size:12px; color:#888; text-align:center">
+        Demo: somchai/demo1234 · nattaya/demo5678
+      </div>
+    </div>
+
+    <div class="card" id="register-form-card" style="display:none">
+      <h3>สมัครสมาชิก</h3>
+      <div id="reg-alert" class="alert"></div>
+      <div class="field"><label>ชื่อผู้ใช้</label><input id="r-user" type="text" placeholder="newuser" /></div>
+      <div class="field"><label>รหัสผ่าน</label><input id="r-pass" type="password" /></div>
+      <div class="field"><label>ชื่อ-นามสกุล</label><input id="r-name" type="text" placeholder="สมหมาย รักไทย" /></div>
+      <div class="field"><label>เลขบัตรประชาชน (13 หลัก)</label><input id="r-natid" type="text" maxlength="13" placeholder="1234567890123" /></div>
+      <div class="field"><label>เบอร์โทรศัพท์</label><input id="r-phone" type="text" placeholder="0812345678" /></div>
+      <button class="btn btn-primary" onclick="doRegister()">สมัครสมาชิก</button>
+    </div>
+  </div>
+
+  <!-- ── PAGE: Home / Balance ───────────────────────────────── -->
+  <div class="page" id="page-home">
+    <div class="balance-card">
+      <div class="balance-label">ยอดเงินในบัญชี</div>
+      <div><span class="balance-amount" id="bal-amount">-</span> <span class="balance-currency">THB</span></div>
+      <div class="balance-name" id="bal-name">-</div>
+    </div>
+    <button class="btn btn-secondary" onclick="loadBalance()">↻ รีเฟรช</button>
+    <button class="btn btn-secondary" onclick="doPartnerHandshake()">🔑 Partner Key Exchange (ECDH demo)</button>
+    <div class="card" id="partner-result" style="display:none">
+      <h3>Partner Key Exchange Result</h3>
+      <div class="kv" id="partner-kv"></div>
+    </div>
+  </div>
+
+  <!-- ── PAGE: Transfer ────────────────────────────────────────── -->
+  <div class="page" id="page-transfer">
+    <div class="card">
+      <h3>โอนเงิน</h3>
+      <div id="transfer-alert" class="alert"></div>
+      <div class="field">
+        <label>ผู้รับ (username)</label>
+        <input id="t-to" type="text" placeholder="nattaya" />
+      </div>
+      <div class="field">
+        <label>จำนวนเงิน (THB)</label>
+        <input id="t-amount" type="number" min="1" step="0.01" placeholder="1000.00" />
+      </div>
+      <button class="btn btn-primary" onclick="doTransfer()">โอนเงิน</button>
+    </div>
+  </div>
+
+  <!-- ── PAGE: Slip ─────────────────────────────────────────── -->
+  <div class="page" id="page-slip">
+    <div id="slip-empty" style="text-align:center; color:#aaa; margin-top:40px">
+      <div style="font-size:40px">🧾</div>
+      <div>ยังไม่มีสลิป — โปรดทำรายการโอนเงินก่อน</div>
+    </div>
+    <div id="slip-content" style="display:none; display:flex; flex-direction:column; gap:14px">
+      <div class="slip-box">
+        <div style="text-align:center; font-size:13px; color:#1a56c4; font-weight:700">
+          🏦 ThaiPay Lite e-Slip
+        </div>
+        <div class="slip-amount-big" id="slip-amount">฿ 0.00</div>
+        <div class="slip-row"><span class="key">หมายเลขอ้างอิง</span><span class="val" id="slip-ref">-</span></div>
+        <div class="slip-row"><span class="key">จาก</span><span class="val" id="slip-from">-</span></div>
+        <div class="slip-row"><span class="key">ถึง</span><span class="val" id="slip-to">-</span></div>
+        <div class="slip-row"><span class="key">วันเวลา</span><span class="val" id="slip-ts">-</span></div>
+        <div class="slip-row"><span class="key">สถานะ</span><span class="val"><span class="badge badge-success">สำเร็จ</span></span></div>
+      </div>
+      <div id="qr-container"></div>
+      <div style="font-size:11px; color:#aaa; text-align:center">สแกน QR เพื่อตรวจสอบ</div>
+    </div>
+  </div>
+
+  <!-- ── PAGE: Verify ──────────────────────────────────────── -->
+  <div class="page" id="page-verify">
+    <div class="card">
+      <h3>ตรวจสอบสลิป</h3>
+      <div id="verify-alert" class="alert"></div>
+      <div class="field">
+        <label>Slip JSON</label>
+        <textarea id="v-slip" rows="6"
+          style="width:100%;padding:8px;border:1px solid #c5cfe8;border-radius:8px;font-size:12px;font-family:monospace;resize:vertical;"
+          placeholder='{"ref":"ABC12345", "from_user":"somchai", ...}'></textarea>
+      </div>
+      <div class="field">
+        <label>Signature</label>
+        <textarea id="v-sig" rows="3"
+          style="width:100%;padding:8px;border:1px solid #c5cfe8;border-radius:8px;font-size:12px;font-family:monospace;resize:vertical;"
+          placeholder="base64url signature"></textarea>
+      </div>
+      <div style="display:flex; gap:8px">
+        <button class="btn btn-primary" onclick="doVerify()" style="flex:1">ตรวจสอบ</button>
+        <button class="btn btn-danger" onclick="doTamper()" style="flex:1">🔧 Tamper Amount</button>
+      </div>
+      <div id="verify-result" style="display:none; text-align:center; margin-top:4px">
+        <span id="verify-badge" class="badge"></span>
+        <div id="verify-msg" style="font-size:13px; margin-top:6px; color:#555"></div>
+      </div>
+    </div>
+    <div class="card" style="font-size:12px; color:#888">
+      <b>วิธีใช้:</b> หลังโอนเงิน ให้กลับมาหน้านี้ — สลิปล่าสุดจะถูกโหลดอัตโนมัติ<br>
+      กด "Tamper Amount" เพื่อแก้ไขยอดเงิน แล้วกด "ตรวจสอบ" อีกครั้ง จะเห็นสถานะ "tampered"
+    </div>
+  </div>
+
+  <!-- ── PAGE: Profile ─────────────────────────────────────── -->
+  <div class="page" id="page-profile">
+    <div class="card" style="align-items:center; gap:12px">
+      <div class="profile-avatar" id="profile-avatar">?</div>
+      <div class="profile-name" id="profile-name">-</div>
+      <div class="profile-rows" style="width:100%">
+        <div class="profile-field">
+          <span class="pk">Username</span>
+          <span class="pv" id="prof-username">-</span>
+        </div>
+        <div class="profile-field">
+          <span class="pk">เลขบัตรประชาชน</span>
+          <span class="pv" id="prof-natid">-</span>
+        </div>
+        <div class="profile-field">
+          <span class="pk">เบอร์โทรศัพท์</span>
+          <span class="pv" id="prof-phone">-</span>
+        </div>
+      </div>
+      <button class="btn btn-secondary" onclick="loadProfile()">↻ โหลดข้อมูล</button>
+    </div>
+    <div class="card" style="font-size:12px; color:#888">
+      ข้อมูลส่วนตัวถูกเข้ารหัสด้วย AES-128 ECB ในฐานข้อมูล (LEGACY – demo finding)
+    </div>
+  </div>
+
+  <!-- ── PAGE: Admin / Audit ───────────────────────────────── -->
+  <div class="page" id="page-admin">
+    <div class="card">
+      <h3>🔒 Audit Log</h3>
+      <button class="btn btn-secondary" onclick="loadAudit()">↻ โหลด Audit Log</button>
+      <div id="audit-table-wrap" style="overflow-x:auto; margin-top:4px">
+        <table id="audit-table">
+          <thead><tr><th>เวลา</th><th>Action</th><th>Actor</th><th>Detail</th><th>HMAC</th></tr></thead>
+          <tbody id="audit-tbody"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <div class="footer">ThaiPay Lite • IBM QSE Demo App</div>
+</div>
+
+<script>
+// ── State ──────────────────────────────────────────────────────────────
+let TOKEN = null;
+let USERNAME = null;
+let DISPLAY_NAME = null;
+let LAST_SLIP = null;
+let LAST_SIG = null;
+
+const API = '';   // same origin
+
+// ── Helpers ────────────────────────────────────────────────────────────
+async function apiFetch(path, opts = {}) {
+  const headers = { 'Content-Type': 'application/json', ...(opts.headers || {}) };
+  if (TOKEN) headers['Authorization'] = 'Bearer ' + TOKEN;
+  const res = await fetch(API + path, { ...opts, headers });
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.detail || JSON.stringify(data));
+  return data;
+}
+
+function showAlert(id, msg, type = 'error') {
+  const el = document.getElementById(id);
+  el.textContent = msg;
+  el.className = `alert show alert-${type}`;
+  setTimeout(() => { el.className = 'alert'; }, 4000);
+}
+
+function showPage(name, tab) {
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.getElementById('page-' + name).classList.add('active');
+  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+  if (tab) tab.classList.add('active');
+  // Auto-load
+  if (name === 'home')    loadBalance();
+  if (name === 'profile') loadProfile();
+  if (name === 'admin')   loadAudit();
+  if (name === 'verify')  prefillVerify();
+}
+
+function switchLoginMode(mode) {
+  document.getElementById('login-form-card').style.display    = mode === 'login'    ? '' : 'none';
+  document.getElementById('register-form-card').style.display = mode === 'register' ? '' : 'none';
+  document.getElementById('ltab-login').classList.toggle('active', mode === 'login');
+  document.getElementById('ltab-register').classList.toggle('active', mode === 'register');
+}
+
+function setLoggedIn(token, username, displayName) {
+  TOKEN = token; USERNAME = username; DISPLAY_NAME = displayName;
+  localStorage.setItem('tp_token', token);
+  localStorage.setItem('tp_user', username);
+  localStorage.setItem('tp_name', displayName);
+  document.getElementById('header-user').style.display = '';
+  document.getElementById('header-name').textContent = displayName;
+  document.getElementById('main-tabs').style.display = '';
+  document.getElementById('page-login').classList.remove('active');
+  showPage('home', document.querySelector('.tab'));
+}
+
+function logout() {
+  TOKEN = null; USERNAME = null; DISPLAY_NAME = null;
+  localStorage.removeItem('tp_token');
+  localStorage.removeItem('tp_user');
+  localStorage.removeItem('tp_name');
+  document.getElementById('header-user').style.display = 'none';
+  document.getElementById('main-tabs').style.display = 'none';
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.getElementById('page-login').classList.add('active');
+}
+
+// ── Login / Register ───────────────────────────────────────────────────
+async function doLogin() {
+  const user = document.getElementById('l-user').value.trim();
+  const pass = document.getElementById('l-pass').value;
+  if (!user || !pass) return showAlert('login-alert', 'กรุณากรอกข้อมูลให้ครบ');
+  try {
+    const data = await apiFetch('/api/login', {
+      method: 'POST', body: JSON.stringify({ username: user, password: pass })
+    });
+    setLoggedIn(data.token, user, data.display_name);
+  } catch (e) { showAlert('login-alert', e.message); }
+}
+
+async function doRegister() {
+  const user  = document.getElementById('r-user').value.trim();
+  const pass  = document.getElementById('r-pass').value;
+  const name  = document.getElementById('r-name').value.trim();
+  const natid = document.getElementById('r-natid').value.trim();
+  const phone = document.getElementById('r-phone').value.trim();
+  if (!user || !pass) return showAlert('reg-alert', 'กรุณากรอก Username และรหัสผ่าน');
+  try {
+    await apiFetch('/api/register', {
+      method: 'POST',
+      body: JSON.stringify({ username: user, password: pass,
+                             display_name: name || 'Demo User',
+                             nat_id: natid || '0000000000000',
+                             phone: phone || '0800000000' })
+    });
+    showAlert('reg-alert', 'สมัครสำเร็จ! กรุณาเข้าสู่ระบบ', 'success');
+    setTimeout(() => switchLoginMode('login'), 1200);
+  } catch (e) { showAlert('reg-alert', e.message); }
+}
+
+// ── Balance ─────────────────────────────────────────────────────────────
+async function loadBalance() {
+  try {
+    const d = await apiFetch('/api/balance');
+    document.getElementById('bal-amount').textContent =
+      Number(d.balance).toLocaleString('th-TH', { minimumFractionDigits: 2 });
+    document.getElementById('bal-name').textContent = d.display_name + ' (' + d.username + ')';
+  } catch (e) {}
+}
+
+// ── Partner handshake ───────────────────────────────────────────────────
+async function doPartnerHandshake() {
+  try {
+    const d = await apiFetch('/api/partner/handshake', { method: 'POST' });
+    const card = document.getElementById('partner-result');
+    const kv   = document.getElementById('partner-kv');
+    card.style.display = '';
+    kv.innerHTML = Object.entries(d).map(([k, v]) =>
+      `<div class="kv-row"><span class="k">${k}</span><span class="v">${v}</span></div>`
+    ).join('');
+  } catch (e) { alert('Partner handshake failed: ' + e.message); }
+}
+
+// ── Transfer ─────────────────────────────────────────────────────────────
+async function doTransfer() {
+  const to  = document.getElementById('t-to').value.trim();
+  const amt = parseFloat(document.getElementById('t-amount').value);
+  if (!to || isNaN(amt) || amt <= 0)
+    return showAlert('transfer-alert', 'กรุณากรอกข้อมูลให้ถูกต้อง');
+  try {
+    const d = await apiFetch('/api/transfer', {
+      method: 'POST', body: JSON.stringify({ to_user: to, amount: amt })
+    });
+    LAST_SLIP = d.slip;
+    LAST_SIG  = d.signature;
+    renderSlip(d.slip);
+    showAlert('transfer-alert', `โอนสำเร็จ! Ref: ${d.slip.ref}`, 'success');
+    setTimeout(() => showPage('slip', null), 1000);
+    loadBalance();
+  } catch (e) { showAlert('transfer-alert', e.message); }
+}
+
+// ── Slip rendering ────────────────────────────────────────────────────────
+function renderSlip(slip) {
+  document.getElementById('slip-empty').style.display   = 'none';
+  document.getElementById('slip-content').style.display = '';
+  document.getElementById('slip-amount').textContent =
+    '฿ ' + Number(slip.amount).toLocaleString('th-TH', { minimumFractionDigits: 2 });
+  document.getElementById('slip-ref').textContent  = slip.ref;
+  document.getElementById('slip-from').textContent = slip.from_name + ' (' + slip.from_user + ')';
+  document.getElementById('slip-to').textContent   = slip.to_name   + ' (' + slip.to_user   + ')';
+  document.getElementById('slip-ts').textContent   = slip.timestamp;
+
+  // QR code
+  const qrContainer = document.getElementById('qr-container');
+  qrContainer.innerHTML = '<div id="qr-inner"></div>';
+  // Encode only key slip fields — full JSON exceeds QR capacity limit
+  const qrPayload = `THAIPAY|${slip.ref}|${slip.from_user}|${slip.to_user}|${slip.amount}|${slip.currency}|${slip.timestamp}`;
+  new QRCode(document.getElementById('qr-inner'), {
+    text: qrPayload,
+    width: 180, height: 180,
+    colorDark: '#0e3a8a', colorLight: '#ffffff',
+  });
+}
+
+// ── Verify ───────────────────────────────────────────────────────────────
+function prefillVerify() {
+  if (LAST_SLIP && LAST_SIG) {
+    document.getElementById('v-slip').value = JSON.stringify(LAST_SLIP, null, 2);
+    document.getElementById('v-sig').value  = LAST_SIG;
+    document.getElementById('verify-result').style.display = 'none';
+  }
+}
+
+async function doVerify() {
+  try {
+    const slip = JSON.parse(document.getElementById('v-slip').value);
+    const sig  = document.getElementById('v-sig').value.trim();
+    const d = await apiFetch('/api/slip/verify', {
+      method: 'POST', body: JSON.stringify({ slip, signature: sig })
+    });
+    showVerifyResult(d.valid, d.message);
+  } catch (e) { showAlert('verify-alert', 'ข้อมูลไม่ถูกต้อง: ' + e.message); }
+}
+
+function doTamper() {
+  try {
+    const slip = JSON.parse(document.getElementById('v-slip').value);
+    slip.amount = (parseFloat(slip.amount) + 99999).toFixed(2);
+    document.getElementById('v-slip').value = JSON.stringify(slip, null, 2);
+    document.getElementById('verify-result').style.display = 'none';
+    showAlert('verify-alert', '⚠️ ยอดเงินถูกแก้ไขแล้ว — กด "ตรวจสอบ" อีกครั้ง', 'error');
+  } catch (e) { showAlert('verify-alert', 'กรุณาวาง Slip JSON ก่อน'); }
+}
+
+function showVerifyResult(valid, msg) {
+  const res   = document.getElementById('verify-result');
+  const badge = document.getElementById('verify-badge');
+  const msgEl = document.getElementById('verify-msg');
+  res.style.display = '';
+  if (valid) {
+    badge.textContent = '✔ VALID';
+    badge.className = 'badge badge-success';
+  } else {
+    badge.textContent = '✘ TAMPERED';
+    badge.className = 'badge badge-danger';
+  }
+  msgEl.textContent = msg;
+}
+
+// ── Profile ──────────────────────────────────────────────────────────────
+async function loadProfile() {
+  try {
+    const d = await apiFetch('/api/profile');
+    const initial = (d.display_name || '?')[0].toUpperCase();
+    document.getElementById('profile-avatar').textContent = initial;
+    document.getElementById('profile-name').textContent   = d.display_name;
+    document.getElementById('prof-username').textContent  = d.username;
+    document.getElementById('prof-natid').textContent     = d.national_id_masked;
+    document.getElementById('prof-phone').textContent     = d.phone_masked;
+  } catch (e) {}
+}
+
+// ── Audit log ────────────────────────────────────────────────────────────
+async function loadAudit() {
+  try {
+    const d = await apiFetch('/api/admin/audit');
+    const tbody = document.getElementById('audit-tbody');
+    tbody.innerHTML = d.entries.map(e =>
+      `<tr>
+        <td>${e.ts}</td>
+        <td><span class="badge badge-info" style="font-size:11px">${e.action}</span></td>
+        <td>${e.actor}</td>
+        <td style="max-width:120px;overflow:hidden;text-overflow:ellipsis">${e.detail}</td>
+        <td>${e.hmac_valid
+              ? '<span class="badge badge-success" style="font-size:10px">✔ OK</span>'
+              : '<span class="badge badge-danger"  style="font-size:10px">✘ FAIL</span>'}</td>
+      </tr>`
+    ).join('');
+  } catch (e) {}
+}
+
+// ── Auto-restore session ──────────────────────────────────────────────────
+(function restoreSession() {
+  const t = localStorage.getItem('tp_token');
+  const u = localStorage.getItem('tp_user');
+  const n = localStorage.getItem('tp_name');
+  if (t && u) setLoggedIn(t, u, n || u);
+})();
+</script>
+</body>
+</html>

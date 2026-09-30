@@ -1,0 +1,1 @@
+# ThaiPay Lite – crypto package
